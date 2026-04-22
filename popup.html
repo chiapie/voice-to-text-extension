@@ -183,12 +183,13 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        gap: 12px;
         padding: 10px 12px;
         border: 2px solid var(--ink);
         margin-bottom: 8px;
         background: var(--card);
         font-family: 'VT323', monospace;
-        font-size: 17px;
+        font-size: 16px;
       }
       .shortcut-row:last-child { margin-bottom: 0; }
 
@@ -196,16 +197,17 @@
         display: flex;
         align-items: center;
         gap: 4px;
+        flex-shrink: 0;
       }
 
       .key {
         display: inline-block;
-        padding: 3px 7px;
+        padding: 3px 6px;
         background: var(--key-face);
         border: 2px solid var(--ink);
         box-shadow: 2px 2px 0 0 var(--ink);
         font-family: 'Press Start 2P', ui-monospace, monospace;
-        font-size: 7px;
+        font-size: 6px;
         color: var(--ink);
         letter-spacing: 0.5px;
         line-height: 1.4;
