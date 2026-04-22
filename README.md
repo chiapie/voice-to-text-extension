@@ -2,6 +2,10 @@
 
 Chrome extension — hold **Space** to dictate into any text field. English + 繁體中文.
 
+<p align="center">
+  <img src="popup_screenshot.png" alt="Spacevoice popup" width="320">
+</p>
+
 ## Install
 
 1. Open `chrome://extensions`, enable **Developer mode**.
