@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Spacevoice</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg: #e8e4d8;
+        --card: #fdfaf0;
+        --ink: #1a1a1a;
+        --muted: #8a8a8a;
+        --green: #3cc46b;
+        --green-bg: #e6f7ec;
+        --green-dim: #a5e5bd;
+        --key-face: #ffffff;
+        --off: #c8c4b4;
+        --off-bg: #ece9de;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      html, body {
+        zoom: 0.95;
+        background-color: var(--bg);
+        background-image:
+          linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+        background-size: 16px 16px;
+        font-family: 'VT323', ui-monospace, Menlo, monospace;
+        color: var(--ink);
+      }
+
+      body {
+        width: 300px;
+        padding: 14px;
+      }
+
+      .popup {
+        background: var(--card);
+        border: 3px solid var(--ink);
+        padding: 18px;
+        box-shadow: 5px 5px 0 0 var(--ink), 0 4px 14px rgba(0, 0, 0, 0.18);
+      }
+
+      /* Header */
+      .header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      .mic-icon {
+        width: 32px;
+        height: 32px;
+        flex-shrink: 0;
+        image-rendering: pixelated;
+      }
+
+      .title {
+        font-family: 'Press Start 2P', ui-monospace, monospace;
+        font-size: 11px;
+        letter-spacing: 1px;
+        color: var(--ink);
+        flex: 1;
+        line-height: 1.2;
+      }
+
+      /* Toggle */
+      .toggle {
+        position: relative;
+        display: inline-block;
+        width: 42px;
+        height: 22px;
+        flex-shrink: 0;
+        cursor: pointer;
+      }
+      .toggle input { opacity: 0; width: 0; height: 0; margin: 0; }
+      .toggle .track {
+        position: absolute;
+        inset: 0;
+        background: var(--green);
+        border: 2px solid var(--ink);
+      }
+      .toggle .knob {
+        position: absolute;
+        top: 1px;
+        right: 1px;
+        width: 14px;
+        height: 16px;
+        background: var(--card);
+        border: 2px solid var(--ink);
+        transition: right 0.12s steps(3, end);
+      }
+      .toggle input:not(:checked) + .track {
+        background: var(--off);
+      }
+      .toggle input:not(:checked) ~ .knob {
+        right: 23px;
+      }
+      .toggle input:focus-visible + .track {
+        outline: 2px solid var(--ink);
+        outline-offset: 2px;
+      }
+
+      /* Status */
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 12px;
+        background: var(--green-bg);
+        border: 2px solid var(--ink);
+        font-family: 'VT323', monospace;
+        font-size: 17px;
+        line-height: 1;
+        margin-bottom: 16px;
+        color: var(--ink);
+      }
+      .status.off {
+        background: var(--off-bg);
+        color: var(--muted);
+      }
+
+      .pixel-dot {
+        width: 10px;
+        height: 10px;
+        background: var(--green);
+        border: 2px solid var(--ink);
+        flex-shrink: 0;
+        animation: blink 1.2s steps(2, end) infinite;
+      }
+      .status.off .pixel-dot {
+        background: var(--off);
+        animation: none;
+      }
+
+      @keyframes blink {
+        0%, 49%   { background: var(--green); }
+        50%, 100% { background: var(--green-dim); }
+      }
+
+      /* Section label */
+      .section-label {
+        font-family: 'Press Start 2P', ui-monospace, monospace;
+        font-size: 7px;
+        color: var(--muted);
+        letter-spacing: 1.5px;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+      }
+
+      /* Language tabs */
+      .lang-tabs {
+        display: flex;
+        border: 2px solid var(--ink);
+        margin-bottom: 16px;
+        background: var(--card);
+      }
+
+      .lang-tab {
+        flex: 1;
+        padding: 9px 6px;
+        background: var(--card);
+        color: var(--ink);
+        border: none;
+        border-right: 2px solid var(--ink);
+        cursor: pointer;
+        font-family: 'VT323', monospace;
+        font-size: 17px;
+        letter-spacing: 0.5px;
+        text-align: center;
+      }
+      .lang-tab:last-child { border-right: none; }
+      .lang-tab.active {
+        background: var(--ink);
+        color: var(--card);
+      }
+
+      /* Shortcut rows */
+      .shortcut-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px;
+        border: 2px solid var(--ink);
+        margin-bottom: 8px;
+        background: var(--card);
+        font-family: 'VT323', monospace;
+        font-size: 17px;
+      }
+      .shortcut-row:last-child { margin-bottom: 0; }
+
+      .keys {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .key {
+        display: inline-block;
+        padding: 3px 7px;
+        background: var(--key-face);
+        border: 2px solid var(--ink);
+        box-shadow: 2px 2px 0 0 var(--ink);
+        font-family: 'Press Start 2P', ui-monospace, monospace;
+        font-size: 7px;
+        color: var(--ink);
+        letter-spacing: 0.5px;
+        line-height: 1.4;
+      }
+
+      .plus {
+        font-family: 'VT323', monospace;
+        font-size: 16px;
+        color: var(--muted);
+        padding: 0 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="popup">
+      <div class="header">
+        <svg class="mic-icon" viewBox="0 0 256 256" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">
+          <rect x="80" y="16" width="96" height="16" fill="#1a1a1a"/>
+          <rect x="64" y="32" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="80" y="32" width="96" height="16" fill="#b8b8b8"/>
+          <rect x="176" y="32" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="48" y="48" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="64" y="48" width="128" height="16" fill="#b8b8b8"/>
+          <rect x="192" y="48" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="48" y="64" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="64" y="64" width="16" height="16" fill="#b8b8b8"/>
+          <rect x="80" y="64" width="96" height="16" fill="#1a1a1a"/>
+          <rect x="176" y="64" width="16" height="16" fill="#b8b8b8"/>
+          <rect x="192" y="64" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="48" y="80" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="64" y="80" width="128" height="16" fill="#b8b8b8"/>
+          <rect x="192" y="80" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="48" y="96" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="64" y="96" width="16" height="16" fill="#b8b8b8"/>
+          <rect x="80" y="96" width="96" height="16" fill="#1a1a1a"/>
+          <rect x="176" y="96" width="16" height="16" fill="#b8b8b8"/>
+          <rect x="192" y="96" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="48" y="112" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="64" y="112" width="128" height="16" fill="#b8b8b8"/>
+          <rect x="192" y="112" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="48" y="128" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="64" y="128" width="16" height="16" fill="#b8b8b8"/>
+          <rect x="80" y="128" width="96" height="16" fill="#1a1a1a"/>
+          <rect x="176" y="128" width="16" height="16" fill="#b8b8b8"/>
+          <rect x="192" y="128" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="48" y="144" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="64" y="144" width="128" height="16" fill="#b8b8b8"/>
+          <rect x="192" y="144" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="64" y="160" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="80" y="160" width="96" height="16" fill="#b8b8b8"/>
+          <rect x="176" y="160" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="80" y="176" width="96" height="16" fill="#1a1a1a"/>
+          <rect x="32" y="192" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="208" y="192" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="32" y="208" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="208" y="208" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="48" y="224" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="192" y="224" width="16" height="16" fill="#1a1a1a"/>
+          <rect x="64" y="240" width="128" height="16" fill="#1a1a1a"/>
+        </svg>
+        <div class="title">Spacevoice</div>
+        <label class="toggle" aria-label="Enabled">
+          <input type="checkbox" id="enabled" />
+          <span class="track"></span>
+          <span class="knob"></span>
+        </label>
+      </div>
+
+      <div class="status" id="status">
+        <span class="pixel-dot"></span>
+        <span id="status-text">Active · listening on hold</span>
+      </div>
+
+      <div class="section-label">Language</div>
+      <div class="lang-tabs">
+        <button class="lang-tab" id="en">English</button>
+        <button class="lang-tab" id="zh-tw">繁體中文</button>
+      </div>
+
+      <div class="shortcut-row">
+        <span>Any text field</span>
+        <span class="keys"><span class="key">HOLD SPACE</span></span>
+      </div>
+      <div class="shortcut-row">
+        <span>Google Docs</span>
+        <span class="keys">
+          <span class="key">SHIFT</span>
+          <span class="plus">+</span>
+          <span class="key">SPACE</span>
+        </span>
+      </div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

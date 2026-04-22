@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "Spacevoice",
+  "version": "0.1.1",
+  "description": "Hold spacebar to dictate voice into any text field. Supports English and Traditional Chinese.",
+  "permissions": ["storage", "activeTab"],
+  "icons": {
+    "16": "icon/icon16.png",
+    "48": "icon/icon48.png",
+    "128": "icon/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Spacevoice",
+    "default_icon": {
+      "16": "icon/icon16.png",
+      "48": "icon/icon48.png",
+      "128": "icon/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["recognizer.js", "content.js"],
+      "run_at": "document_idle",
+      "all_frames": true,
+      "match_about_blank": true,
+      "match_origin_as_fallback": true
+    }
+  ]
+}
