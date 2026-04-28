@@ -1,9 +1,9 @@
 # voice-to-text
 
-Chrome extension - hold **Space** to dictate into any text field. English + 繁體中文.
+Chrome extension - hold **Space** to dictate into any text field. Language: English + 繁體中文.
 
 <p align="center">
-  <img src="popup_screenshot.png" alt="Spacevoice popup" width="320">
+  <img src="popup_screenshot.png" alt="Spacevoice popup" width="220">
 </p>
 
 ## Install

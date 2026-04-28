@@ -15,7 +15,17 @@
   let currentShift = false;
   let pill = null;
   let pillText = null;
+  let composing = false;
   let settings = { lang: navigator.language || "en-US", enabled: true };
+
+  // IME composition guard: when a Chinese/Japanese/Korean IME is active,
+  // Space confirms the current candidate. We must NOT preventDefault on it.
+  window.addEventListener("compositionstart", () => { composing = true; }, true);
+  window.addEventListener("compositionend", () => { composing = false; }, true);
+
+  function isImeEvent(e) {
+    return composing || e.isComposing === true || e.keyCode === 229;
+  }
 
   // Live-insertion state: tracks text we've already written into the field
   // during the current recording so we can replace it as interim results
@@ -76,30 +86,39 @@
     if (pill) return;
     const host = document.createElement("div");
     host.style.cssText =
-      "position:fixed;right:16px;bottom:16px;z-index:2147483647;pointer-events:none;";
+      "position:fixed;right:20px;bottom:20px;z-index:2147483647;pointer-events:none;";
     const shadow = host.attachShadow({ mode: "open" });
     const style = document.createElement("style");
+    // Pixel-art look matched to popup.html: VT323 mono, cream card, thick
+    // black border, hard offset shadow, square blinking dot with stepped
+    // animation. Google Fonts @import is best-effort — falls back to system
+    // monospace if blocked by the page's CSP.
     style.textContent = `
+      @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
       .pill {
-        font: 500 13px -apple-system, system-ui, sans-serif;
-        background: rgba(20,20,20,.92);
-        color: #fff;
-        padding: 10px 14px;
-        border-radius: 999px;
-        display: flex; align-items: center; gap: 10px;
-        box-shadow: 0 8px 24px rgba(0,0,0,.25);
+        font-family: 'VT323', ui-monospace, Menlo, monospace;
+        font-size: 14px;
+        line-height: 1;
+        letter-spacing: 0.5px;
+        background: #fdfaf0;
+        color: #1a1a1a;
+        padding: 8px 11px;
+        border: 2px solid #1a1a1a;
+        box-shadow: 4px 4px 0 0 #1a1a1a;
+        display: flex; align-items: center; gap: 8px;
         max-width: 60vw;
       }
       .dot {
-        width: 10px; height: 10px; border-radius: 50%;
-        background: #ff3b30;
-        animation: pulse 1s ease-in-out infinite;
+        width: 10px; height: 10px;
+        background: #3cc46b;
+        border: 2px solid #1a1a1a;
         flex: 0 0 auto;
+        animation: blink 1.2s steps(2, end) infinite;
       }
       .txt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-      @keyframes pulse {
-        0%,100% { opacity: 1; transform: scale(1); }
-        50% { opacity: .4; transform: scale(.8); }
+      @keyframes blink {
+        0%, 49%   { background: #3cc46b; }
+        50%, 100% { background: #a5e5bd; }
       }
     `;
     const wrap = document.createElement("div");
@@ -294,6 +313,48 @@
     liveLength = 0;
   }
 
+  // ---------- transcript polishing ----------
+  // Web Speech API often returns lowercase, unpunctuated text (especially for
+  // en-US and zh-TW). This pass is a cheap local cleanup — capitalize sentence
+  // starts, fix standalone "i", normalize ASCII punctuation to full-width in
+  // Chinese, and add a terminal period (or question mark, when the utterance
+  // looks like a question) if the utterance is missing one.
+  const EN_Q_START = /^(what|whats|what's|who|whose|whom|when|where|why|how|which|can|could|would|should|will|do|does|did|is|isn't|are|aren't|was|were|am|may|might|shall|have|has|had|don't|doesn't|didn't)\b/i;
+  const ZH_Q_TAIL = /[嗎呢吗]$/;
+  const ZH_Q_START = /^(誰|谁|什麼|什么|怎麼|怎么|為什麼|为什么|為何|为何|哪|何時|何时|是不是|有沒有|有没有|可不可以|要不要|能不能)/;
+
+  function polishTranscript(raw, lang) {
+    if (!raw) return raw;
+    let s = raw.replace(/\s+/g, " ").trim();
+    if (!s) return s;
+
+    const isZh = (lang || "").toLowerCase().startsWith("zh");
+
+    if (isZh) {
+      // ASCII -> full-width punctuation when surrounded by Chinese context.
+      s = s.replace(/\s*,\s*/g, "，")
+           .replace(/\s*\?\s*/g, "？")
+           .replace(/\s*!\s*/g, "！")
+           .replace(/\s*;\s*/g, "；")
+           .replace(/\s*:\s*/g, "：");
+      if (/[一-鿿A-Za-z0-9]$/.test(s) && !/[。！？…]$/.test(s)) {
+        s += (ZH_Q_TAIL.test(s) || ZH_Q_START.test(s)) ? "？" : "。";
+      }
+      return s;
+    }
+
+    // English: capitalize first letter
+    s = s.charAt(0).toUpperCase() + s.slice(1);
+    // Capitalize the first letter after sentence-ending punctuation
+    s = s.replace(/([.!?])(\s+)([a-z])/g, (_, p, ws, c) => p + ws + c.toUpperCase());
+    // Capitalize standalone "i" and contractions (i'm, i'll, i've, i'd)
+    s = s.replace(/\bi\b/g, "I").replace(/\bi('[a-z]+)/g, (_, suf) => "I" + suf);
+    if (/[A-Za-z0-9]$/.test(s)) {
+      s += EN_Q_START.test(s) ? "?" : ".";
+    }
+    return s;
+  }
+
   // ---------- recording lifecycle ----------
   async function startRecording(shift) {
     LOG("startRecording shift=", shift);
@@ -321,12 +382,13 @@
 
     try {
       LOG("calling recognizer.start lang=", lang);
-      const text = await recognizer.start(lang, (partial) => {
+      const raw = await recognizer.start(lang, (partial) => {
         LOG("interim:", partial);
         updatePill(partial, lang);
         writeLive(partial);
       });
-      LOG("final text:", text);
+      const text = polishTranscript(raw, lang);
+      LOG("final text:", text, "(raw:", raw, ")");
       if (IS_GOOGLE_DOCS) {
         if (text && text.trim()) broadcastPaste(text.trim());
       } else {
@@ -511,6 +573,8 @@
       if (e.code !== "Space") return;
       if (!settings.enabled) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      // IME guard: Space confirms the candidate during Chinese/JP/KR composition.
+      if (isImeEvent(e)) return;
       if (e.repeat) {
         if (recording || holdTimer || spaceDown || childArmed) hardBlock(e);
         return;
@@ -535,6 +599,7 @@
     (e) => {
       if (!settings.enabled) return;
       if (e.code !== "Space" && e.key !== " ") return;
+      if (isImeEvent(e)) return;
       if (recording || holdTimer || spaceDown || childArmed) hardBlock(e);
     },
     true
@@ -544,8 +609,9 @@
     (e) => {
       if (!settings.enabled) return;
       if (!(recording || holdTimer || spaceDown || childArmed)) return;
-      // We only care about plain space insertions from the hotkey, not pastes
-      // from our own recognizer result.
+      // Don't block IME composition writes; only block plain space inserts
+      // from the hotkey, not pastes from our own recognizer result.
+      if (e.inputType && e.inputType.startsWith("insertComposition")) return;
       if (e.inputType === "insertText" && e.data === " ") hardBlock(e);
     },
     true
@@ -556,6 +622,7 @@
     (e) => {
       if (e.code !== "Space") return;
       if (!settings.enabled) return;
+      if (isImeEvent(e)) return;
       // Only act if this frame (or the top frame) had armed something.
       if (IS_TOP) {
         if (!spaceDown) return;
